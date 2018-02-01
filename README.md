@@ -16,10 +16,10 @@
     hlpsl2if nom.hlpsl
 ```
 
-# Analyse
+# Analysis
 ```bash
     cl-atse --if --ofif nom.if
 ```
 Options :
-* `--noexec` affiche la spécification telle que comprise
-* `--ns --short` si attaque, affiche la plus courte
+* `--noexec` displays the specification as understood.
+* `--ns --short` if an attack occured, write the shortest.
