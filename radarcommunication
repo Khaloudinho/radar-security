@@ -1,0 +1,109 @@
+%% PROTOCOL: AGMM
+%% P -> C : {{PkAp}PkS,PkP,P}PkC
+%% C -> P {Ni, Nj, C, tmp}PkP | C génère Nj = Ni^Nc
+%% P -> C {Nk, P, tmp}PkC | P génère Nk = Nj^Np
+%% C -> P {Nk, C, infos, tmp}PkP
+%% P -> C {Nk, P, Ok, tmp}PkC
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% definition du rele alice, initiant le protocole
+role alice (P, C: agent,
+            PkC, PkS : public_key,
+            SND, RCV: channel(dy))
+played_by C def=
+
+local State: nat,
+      Ni, Nc, Nj, Nk, Tmp, Ok, Infos, Auth: message,
+      PkP,PkAP: public_key
+
+      init State:=0
+
+      transition
+
+  0.  State=0 /\ RCV({Auth'.PkP'.P}_PkC)  /\ Auth'={PkAP'}_PkS =|>
+      State':=1   /\ Ni':=new() /\ Tmp':=new() /\ Nc':=new() /\ Nj':=exp(Ni',Nc') /\ witness(C,P,bob_alice_nj,Nj') /\ witness(C,P,bob_alice_ni,Ni') /\ SND({Ni'.Nj'.C.Tmp'}_PkP')
+
+  2.  State=1 /\ RCV({Nk'. P. Tmp}_PkC)  =|>
+      State':=2 /\ Infos':=new() /\ witness(C,P,bob_alice_ninfos,Infos') /\ secret(Infos',infos,{P,C}) /\ SND({Nk'.C.Infos'.Tmp}_PkP)
+
+  4. State=2 /\ RCV({Nk.P.Ok'.Tmp}_PkC) =|> State':=2 /\ request(C,P,alice_bob_nauth,Auth) /\ request(C,P,alice_bob_nk,Nk)
+
+end role
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% role bob
+
+%% P -> C : {{PkAp}PkS,PkP,P}PkC
+%% C -> P {Ni, Nj, C, tmp}PkP | C génère Nj = Ni^Nc
+%% P -> C {Nk, P, tmp}PkC | P génère Nk = Nj^Np
+%% C -> P {Nk, C, infos, tmp}PkP
+%% P -> C {Nk, P, Ok, tmp}PkC
+
+role bob (P, C: agent,
+            PkC, PkP: public_key,
+            SND, RCV: channel(dy))
+played_by P def=
+
+  local State: nat,
+          Ni, Nc, Nj, Np, Nk, Tmp, Ok, Auth, Infos : message
+
+  init State:=0
+
+  transition
+
+    0.  State=0 /\ RCV(start) =|>
+	State':=1 /\ Auth':=new() /\ witness(P,C,alice_bob_nauth,Auth') /\ SND({Auth'.PkP.P}_PkC)
+
+    2.  State=1 /\ RCV({Ni'.Nj'.C.Tmp'}_PkP) =|>
+	State':=2  /\ Np':=new() /\ Nk':=exp(Nj',Np')  /\ witness(P,C,alice_bob_nk,Nk') /\ SND({Nk'.P.Tmp'}_PkC)
+
+    4.  State=2 /\ RCV({Nk.C.Infos'.Tmp}_PkP) =|>
+State':=3  /\ Ok':=new() /\ SND({Nk.P.Ok'.Tmp}_PkC) /\ request(P,C,bob_alice_nj,Nj) /\ request(P,C,bob_alice_ni,Ni) /\ request(P,C,bob_alice_ninfos,Infos)
+
+end role
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% definition du rele caracterisant une session
+role session(P, C: agent, PkP, PkC, PkS: public_key) def=
+
+  local SP, RP, SC, RC: channel(dy)
+
+  composition
+
+	alice(P,C,PkC,PkS,SC,RC)
+     /\ bob(P,C,PkC,PkP,SP,RP)
+
+end role
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% definition du rele caracterisant le scenario e executer
+role environment() def=
+
+    const p, c: agent,
+	  pkp, pkc, pki,pks: public_key,
+    infos, bob_alice_nj, bob_alice_ni, bob_alice_ninfos, alice_bob_nk, alice_bob_nauth : protocol_id
+
+    intruder_knowledge = {p, c, pkp, pkc, pki, inv(pki)}
+
+    composition
+
+	session(p,c,pkp,pkc,pks) /\ session(p,c,pkp,pkc,pks) /\ session(c,p,pkc,pkp,pks) /\ session(p,i,pkp,pki,pks)
+  /\ session(i,c,pki,pkc,pks) /\ session(c,p,pkc,pkp,pks) /\ session(p,i,pkp,pki,pks)
+  /\ session(i,c,pki,pkc,pks)
+
+end role
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% lancement du rele principal
+environment()
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% pour l'instant, pas de section goal ici (donc pas de propriete e verifier)
+
+goal
+  secrecy_of infos
+  authentication_on bob_alice_nj
+  authentication_on bob_alice_ni
+  authentication_on bob_alice_ninfos
+  authentication_on alice_bob_nk
+  authentication_on alice_bob_nauth
+end goal
