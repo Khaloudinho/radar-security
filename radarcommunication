@@ -12,7 +12,7 @@ role server (A, B: agent,
             SND, RCV: channel(dy))
 played_by A def=
 
-  local State: nat, Na, Nb: text
+  local State: nat, Na, Nb, NbInfra: text
 
   init State:=0
 
@@ -21,9 +21,11 @@ played_by A def=
     0.  State=0 /\ RCV(start) =|>
 	State':=1 /\ Na':=new() /\ witness(A,B,server_radar_nb,Na') /\ SND({Na'.A}_PKb)
 
-    2.  State=1 /\ RCV({Na.Nb'}_PKa) =|>
-	State':=2 /\ SND({Nb'}_PKb)
-	/\ request(A,B,server_radar_nb,Nb')
+    1.  State=1 /\ RCV({Na.Nb'}_PKa) =|>
+	State':=2 /\ SND({Nb'}_PKb) /\ request(A,B,server_radar_nb,Nb')
+
+	2. State=2 /\ RCV({NbInfra'.B}_PKa) =|>
+    State':=3 /\ SND({NbInfra'.A}_PKb)
 
 end role
 
@@ -33,7 +35,7 @@ role radar (A, B: agent,
             SND, RCV: channel(dy))
 played_by B def=
 
-  local State: nat, Na, Nb: text
+  local State: nat, Na, Nb, NbInfra: text
 
   init State:=0
 
@@ -42,8 +44,11 @@ played_by B def=
 	0.  State=0 /\ RCV({Na'.A}_PKb) =|>
 	State':=1 /\ Nb':=new() /\ witness(B,A,server_radar_nb,Nb') /\ SND({Na'.Nb'}_PKa)
 
-    2.  State=1 /\ RCV({Nb}_PKb) =|>
+    1.  State=1 /\ RCV({Nb}_PKb) =|>
 	State':=2 /\ request(B,A,server_radar_nb,Na)
+
+    2. State=2 /\ RCV({NbInfra'.A}_PKb) =|>
+    State':=3 /\ SND({NbInfra'.B}_PKa)
 
 end role
 
