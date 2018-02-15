@@ -1,61 +1,63 @@
 %%% A -> B: {A.B.Na}_Kb
 %%% B -> A: {A.B.Na.s}_Ka
 
-role role_A(A:agent,B:agent,Ka:public_key,Kb:public_key,SND,RCV:channel(dy))
+role server(A:agent, B:agent, Ka:public_key, Kb:public_key, SND, RCV:channel(dy))
 played_by A
 def=
 	local
-		State:nat,Na:text,nomInfra:text
+		State:nat, Na:text, AskInfra:text, NumberInfra:text
 	init
 		State := 0
 	transition
-		1. State=0 /\ RCV(start) =|> 
-                   State':=1 /\ Na':=new() /\ SND({A.B.Na'}_Kb)
+		0. State=0 /\ RCV(start) =|>
+           State':=1 /\ Na':=new()
+            /\ SND({A.B.Na'}_Kb)
 
-		2. State=1 /\ RCV({A.B.Na.nomInfra'}_Ka) =|>
-                   State':=2 
-                   
-                   %% A checks that he receives the same nonce 
-                   %% that he sent at step 1.
+		1. State=1 /\ RCV({A.B.Na.AskInfra'}_Ka) =|>
+           State':=2 /\ NumberInfra':=new()
+            /\ SND({A.B.Na.NumberInfra'}_Ka)
+            /\ secret(NumberInfra',sec_1,{A,B})
+            /\ witness(A,B,auth_1,Na)
 
-                   /\ request(A,B,auth_1,Na)
 end role
 
-role role_B(B:agent,A:agent,nomInfra:text,Ka:public_key,Kb:public_key,SND,RCV:channel(dy))
+role radar(B:agent, A:agent, Ka:public_key, Kb:public_key, SND, RCV:channel(dy))
 played_by B
 def=
 	local
-		State:nat,Na:text
+		State:nat, Na:text, AskInfra:text, NumberInfra:text
 	init
 		State := 0
 	transition
-		1. State=0 /\ RCV({A.B.Na'}_Kb) =|> 
+		0. State=0 /\ RCV({A.B.Na'}_Kb) =|>
+           State':=1 /\ AskInfra':=new()
+            /\ SND({A.B.Na'.AskInfra'}_Ka)
+            /\ secret(AskInfra',sec_1,{A,B})
+            /\ witness(B,A,auth_1,Na')
                    
-                   State':=1 /\ SND({A.B.Na'.nomInfra}_Ka)
+        1. State=1 /\ RCV({A.B.Na'.NumberInfra'}_Ka) =|>
+            State':=2 /\ wrequest(B,A,auth_1,Na')
 
-                   /\ secret(nomInfra,sec_1,{A,B})
-                   %% B hopes that Na will permit to authenticate him
-                   /\ witness(B,A,auth_1,Na')
 end role
 
-role session(A:agent,B:agent,nomInfra:text,Ka:public_key,Kb:public_key)
+role session(A:agent, B:agent, S1:text, Ka:public_key, Kb:public_key)
 def=
 	local
-		SND2,RCV2,SND1,RCV1:channel(dy)
+		SND2, RCV2, SND1, RCV1:channel(dy)
 	composition
-		role_B(B,A,nomInfra,Ka,Kb,SND2,RCV2) /\ role_A(A,B,Ka,Kb,SND1,RCV1)
+		radar(B,A,Ka,Kb,SND2,RCV2) /\ server(A,B,Ka,Kb,SND1,RCV1)
 end role
 
 role environment()
 def=
-	const
-		ka,kb:public_key,
-                alice,bob:agent,
-                s1:text,
-                sec_1,auth_1:protocol_id
-	intruder_knowledge = {alice,bob,ka,kb}
+	const ka, kb:public_key,
+	      server, radar:agent,
+	      s1:text, 
+	      sec_1, auth_1:protocol_id
+
+	intruder_knowledge = {server,radar,ka,kb}
 	composition
-		session(alice,bob,s1,ka,kb) /\ session(alice,bob,s1,ka,kb)
+		session(server,radar,s1,ka,kb) /\ session(server,radar,s1,ka,kb)
 end role
 
 goal
