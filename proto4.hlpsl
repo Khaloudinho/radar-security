@@ -1,7 +1,4 @@
-%%% A -> B: {A.B.Na}_Kb
-%%% B -> A: {A.B.Na.s}_Ka
-
-role server(A:agent, B:agent, Ka:public_key, Kb:public_key, SND, RCV:channel(dy))
+role radar(A:agent, B:agent, Ka:public_key, Kb:public_key, SND, RCV:channel(dy))
 played_by A
 def=
 	local
@@ -21,7 +18,7 @@ def=
 
 end role
 
-role radar(B:agent, A:agent, Ka:public_key, Kb:public_key, SND, RCV:channel(dy))
+role server(B:agent, A:agent, Ka:public_key, Kb:public_key, SND, RCV:channel(dy))
 played_by B
 def=
 	local
@@ -45,7 +42,7 @@ def=
 	local
 		SND2, RCV2, SND1, RCV1:channel(dy)
 	composition
-		radar(B,A,Ka,Kb,SND2,RCV2) /\ server(A,B,Ka,Kb,SND1,RCV1)
+		server(B,A,Ka,Kb,SND2,RCV2) /\ radar(A,B,Ka,Kb,SND1,RCV1)
 end role
 
 role environment()
@@ -55,14 +52,14 @@ def=
 	      s1:text, 
 	      sec_1, auth_1:protocol_id
 
-	intruder_knowledge = {server,radar,ka,kb}
+	intruder_knowledge = {radar,server,ka,kb}
 	composition
-		session(server,radar,s1,ka,kb) /\ session(server,radar,s1,ka,kb)
+		session(radar,server,s1,ka,kb) /\ session(radar,server,s1,ka,kb)
 end role
 
 goal
 	secrecy_of sec_1
-        authentication_on auth_1
+    authentication_on auth_1
 end goal
 
 environment()
