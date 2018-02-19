@@ -1,3 +1,9 @@
+%%% A = "radar"
+%%% B => "serveur"
+%%% A -> B: {A.B.Na}_Kb
+%%% B -> A: {A.B.Na.s}_Ka 
+%%% {A.B.Na'.AskInfra'}_Ka
+%%% A -> 
 role radar(A:agent, B:agent, Ka:public_key, Kb:public_key, SND, RCV:channel(dy))
 played_by A
 def=
