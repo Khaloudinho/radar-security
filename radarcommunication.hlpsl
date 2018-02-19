@@ -1,0 +1,93 @@
+%% PROTOCOL: NSPK: Needham-Schroeder Public-Key Protocol
+%% VARIANT: original version (of 1978) without key server
+%% PURPOSE: Two-party mutual authentication
+%% ALICE_BOB:
+%% 1. A  - {Na.A}_PKb ----> B
+%% 2. A <- {Na.Nb}_PKa ---  B
+%% 3. A  - {Nb}_PKb ------> B
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% definition du role server, initiant le protocole
+role server (A, B: agent,
+            PKa, PKb: public_key,
+            SND, RCV: channel(dy))
+played_by A def=
+
+  local State: nat, Na, Nb, NbInfra: text
+
+  init State:=0
+
+  transition
+
+    0.  State=0 /\ RCV(start) =|>
+	State':=1 /\ Na':=new() /\ witness(A,B,server_radar_nb,Na') /\ SND({Na'.A}_PKb)
+
+    1.  State=1 /\ RCV({Na.Nb'}_PKa) =|>
+	State':=2 /\ SND({Nb'}_PKb) /\ request(A,B,server_radar_nb,Nb')
+
+	2. State=2 /\ RCV({NbInfra'.B}_PKa) =|>
+    State':=3 /\ SND({NbInfra'.A}_PKb)
+
+end role
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+role radar (A, B: agent,
+            PKa, PKb: public_key,
+            SND, RCV: channel(dy))
+played_by B def=
+
+  local State: nat, Na, Nb, NbInfra: text
+
+  init State:=0
+
+  transition
+
+	0.  State=0 /\ RCV({Na'.A}_PKb) =|>
+	State':=1 /\ Nb':=new() /\ witness(B,A,server_radar_nb,Nb') /\ SND({Na'.Nb'}_PKa)
+
+    1.  State=1 /\ RCV({Nb}_PKb) =|>
+	State':=2 /\ request(B,A,server_radar_nb,Na)
+
+    2. State=2 /\ RCV({NbInfra'.A}_PKb) =|>
+    State':=3 /\ SND({NbInfra'.B}_PKa)
+
+end role
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% definition du role caracterisant une session
+role session(A, B: agent, PKa, PKb: public_key) def=
+
+  local SA, RA, SB, RB: channel(dy)
+
+  composition
+
+	server(A,B,PKa,PKb,SA,RA)
+     /\ radar(A,B,PKa,PKb,SB,RB)
+
+end role
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% definition du role caracterisant le scenario e executer
+role environment() def=
+
+    const a, b: agent,
+	  pka, pkb, pki: public_key,
+	   server_radar_nb: protocol_id
+
+    intruder_knowledge = {a, b, pka, pkb, pki, inv(pki)}
+
+    composition
+
+	session(a,b,pka,pkb) /\ session(a,b,pka,pkb) /\ session(a,i,pka,pki)
+
+end role
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% pour l'instant, pas de section goal ici (donc pas de propriete e verifier)
+
+goal
+	authentication_on server_radar_nb
+end goal
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% lancement du role principal
+environment()
