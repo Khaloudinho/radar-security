@@ -18,7 +18,7 @@
 
 # Analysis
 ```bash
-    cl-atse --if --ofif nom.if
+    cl-atse --if --of if nom.if
 ```
 Options :
 * `--noexec` displays the specification as understood.
