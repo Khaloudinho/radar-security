@@ -1,5 +1,5 @@
-%%% A = "radar"
-%%% B => "serveur"
+%%% A = "radar role"
+%%% B => "server role"
 %%% A -> B: {A.B.Na}_Kb
 %%% B -> A: {A.B.Na.s}_Ka 
 %%% {A.B.Na'.AskInfra'}_Ka
@@ -39,7 +39,7 @@ def=
             /\ witness(B,A,auth_1,Na')
                    
         1. State=1 /\ RCV({A.B.Na'.NumberInfra'}_Ka) =|>
-            State':=2 /\ wrequest(B,A,auth_1,Na')
+            State':=2 /\ request(B,A,auth_1,Na')
 
 end role
 
